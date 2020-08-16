@@ -1,7 +1,6 @@
 # Exporting text messages with PhoneView
 
 
-
 # Recommended Format
 
 Open PhoneView, wait until it has archived the iPhone. Once that is done, go
@@ -9,6 +8,8 @@ to *Archives* > *View Message Archives*, and then click *Save Messages*.
 When you export, pick the CSV export format, and uncheck the export of media
 (unless you want every photo and video sent in the messages to be exported
 as well):
+
+![Screenshot of PhoneView's "Save Messages" export dialog: Make sure to select "CSV File" and to uncheck "Save Media Items As Separate Files"](PhoneViewExportScreenshot.png)
 
 ## CSV file format
 
