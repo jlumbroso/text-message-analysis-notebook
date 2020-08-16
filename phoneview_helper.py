@@ -328,7 +328,7 @@ def plot_texts(
         texts_df: pd.DataFrame,
         time_frequency: str = "M",
         split_by_direction: bool = True,
-        absolute: bool = False,
+        rescaled: bool = False,
         remove_gaps: bool = False,
         count_or_volume: PlotStyle = PlotStyle.COUNT,
         label_date_format: typing.Optional[str] = None,
@@ -378,11 +378,11 @@ def plot_texts(
     else:
         processed_df = aggregate_df(df)
 
-    if absolute:
+    if rescaled:
         processed_df = processed_df.div(processed_df.sum(1), axis=0)
 
     # compute the title based on the parameters
-    title = "Absolute " if absolute else "Relative "
+    title = "Rescaled " if rescaled else "Absolute "
     title += "Number of " if count_or_volume == PlotStyle.COUNT else "Volume (in characters) of "
     title += "Messages"
     if split_by_direction:
