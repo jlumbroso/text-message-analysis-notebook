@@ -19,6 +19,7 @@ __all__ = [
 import collections
 import csv
 import datetime
+import enum
 import io
 import re
 import textwrap
@@ -65,6 +66,11 @@ PhoneViewMsgData = typing.TypedDict(
     },
     total=False
 )
+
+
+class PlotStyle(enum.Enum):
+    COUNT = 'count'
+    VOLUME = 'volume'
 
 
 def _load_internal_phoneview_msg_file(
@@ -245,6 +251,10 @@ def load_csv(
 
 def erase_labels(lst, regexp=r"([0-9]*)/[0-9]*"):
 
+    # default regexp, saves first number
+    if regexp is None:
+        regexp = r"([0-9]*)/[0-9]*"
+
     cregexp = re.compile(regexp)
 
     new_lst = []
@@ -312,3 +322,84 @@ def dump_to_csv(dataframe: pd.DataFrame, filepath: str = None) -> typing.Optiona
 
     else:
         return f.getvalue()
+
+
+def plot_texts(
+        texts_df: pd.DataFrame,
+        time_frequency: str = "M",
+        split_by_direction: bool = True,
+        absolute: bool = True,
+        remove_gaps: bool = False,
+        count_or_volume: PlotStyle = PlotStyle.COUNT,
+        label_date_format=None,
+        colors=None,
+):
+
+    df = texts_df
+
+    def aggregate_df(df):
+        if count_or_volume == PlotStyle.COUNT:
+            agg_df = df.resample(time_frequency).count().drop(columns=["length", "content"])
+        elif count_or_volume == PlotStyle.VOLUME:
+            agg_df = df.resample(time_frequency).sum().drop(columns=["inbound"])
+        else:
+            raise ValueError("{} is not a valid value for `count_or_volume`".format(
+                count_or_volume,
+            ))
+
+        column_name = agg_df.columns.to_list()[0]
+
+        if remove_gaps:
+            agg_df = agg_df[agg_df[column_name] > 0]
+
+        return agg_df
+
+
+    if split_by_direction:
+
+        # split by inbound/outbound
+        df_inbound = df[df["inbound"] == True]
+        df_outbound = df[df["inbound"] == False]
+
+        # stack the two datasets
+        processed_df = pd.merge(
+            aggregate_df(df_inbound),
+            aggregate_df(df_outbound),
+            how="outer",
+            on=["timestamp"]
+        )
+
+        # rename columns
+        processed_df.rename(columns={"inbound_x": "received", "inbound_y": "sent"}, inplace=True)
+        processed_df.rename(columns={"length_x": "received", "length_y": "sent"}, inplace=True)
+
+    else:
+        processed_df = aggregate_df(df)
+
+    if absolute:
+        processed_df = processed_df.div(processed_df.sum(1), axis=0)
+
+    # compute the title based on the parameters
+    title = "Absolute " if absolute else "Relative "
+    title += "Number of " if count_or_volume == "count" else "Volume of "
+    title += "Messages"
+    if split_by_direction:
+        title += " (by direction)"
+
+    # actually plot this data
+    ax = processed_df.plot(
+        kind="bar",
+        stacked=True,
+        figsize=(12, 5),
+        title=title,
+        color=colors,
+    )
+
+    _ = ax.set_xlabel("Date")
+    _ = ax.set_xticklabels(
+        erase_labels([
+            pandas_datetime.strftime("%Y/%m/%d %H:%m")
+            for pandas_datetime in processed_df.index
+        ], regexp=label_date_format))
+
+    return ax.get_figure()
