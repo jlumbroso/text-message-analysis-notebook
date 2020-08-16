@@ -328,11 +328,13 @@ def plot_texts(
         texts_df: pd.DataFrame,
         time_frequency: str = "M",
         split_by_direction: bool = True,
-        absolute: bool = True,
+        absolute: bool = False,
         remove_gaps: bool = False,
         count_or_volume: PlotStyle = PlotStyle.COUNT,
-        label_date_format=None,
+        label_date_format: typing.Optional[str] = None,
         colors=None,
+        date_start: typing.Optional[str] = None,
+        date_end: typing.Optional[str] = None,
 ):
 
     df = texts_df
@@ -381,10 +383,14 @@ def plot_texts(
 
     # compute the title based on the parameters
     title = "Absolute " if absolute else "Relative "
-    title += "Number of " if count_or_volume == "count" else "Volume of "
+    title += "Number of " if count_or_volume == PlotStyle.COUNT else "Volume (in characters) of "
     title += "Messages"
     if split_by_direction:
         title += " (by direction)"
+
+    # if we wanted to cut the range
+    if date_start is not None or date_end is not None:
+        processed_df = processed_df.loc[date_start:date_end]
 
     # actually plot this data
     ax = processed_df.plot(
